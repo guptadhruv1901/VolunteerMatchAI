@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.crud.profiles import create_profile, delete_profile, get_profile, list_profiles, update_profile
@@ -11,6 +11,11 @@ from app.services.catalogue import CONTEXTS, OPPORTUNITIES, get_context, get_opp
 from app.services.recommendation import recommend
 
 Base.metadata.create_all(bind=engine)
+if engine.dialect.name == "sqlite":
+    profile_columns = {column["name"] for column in inspect(engine).get_columns("profiles")}
+    if "description" not in profile_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE profiles ADD COLUMN description TEXT NOT NULL DEFAULT ''"))
 app = FastAPI(title="VolunteerMatchAI API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -93,9 +98,13 @@ def alternatives(recommendation_id: int, db: Session = Depends(get_db)):
     if not item: raise HTTPException(404, "Recommendation not found")
     prior = {x.opportunity_id for x in db.scalars(select(RecommendationHistory).where(RecommendationHistory.profile_id == item.profile_id)) if x.opportunity_id}
     profile = get_profile(db, item.profile_id)
-    context = ContextOut(**item.context)
+    context = ContextOut.model_validate(item.context)
     result = recommend(db, profile, context=context, excluded=prior)
-    return result["alternatives"] + ([result["opportunity"]] if result["opportunity"] else [])
+    return result["alternatives"]
+
+@app.post("/api/recommendations/{recommendation_id}/alternatives", response_model=list[Opportunity])
+def request_alternative(recommendation_id: int, db: Session = Depends(get_db)):
+    return alternatives(recommendation_id, db)
 @app.post("/api/completions", response_model=CompletionOut, status_code=201)
 def complete(data: CompletionCreate, db: Session = Depends(get_db)):
     if not get_profile(db, data.profile_id) or not get_opportunity(data.opportunity_id): raise HTTPException(404, "Profile or opportunity not found")
@@ -112,6 +121,24 @@ def complete_recommendation(recommendation_id: int, db: Session = Depends(get_db
 def history(profile_id: int, db: Session = Depends(get_db)):
     if not get_profile(db, profile_id): raise HTTPException(404, "Profile not found")
     return list(db.scalars(select(RecommendationHistory).where(RecommendationHistory.profile_id == profile_id).order_by(RecommendationHistory.created_at.desc())))
-@app.get("/api/profiles/{profile_id}/history")
+@app.get("/api/profiles/{profile_id}/history", response_model=HistorySummary)
 def profile_history(profile_id: int, db: Session = Depends(get_db)):
-    return history(profile_id, db)
+    if not get_profile(db, profile_id):
+        raise HTTPException(404, "Profile not found")
+    completions = list(db.scalars(select(Completion).where(Completion.profile_id == profile_id).order_by(Completion.completed_at.desc())))
+    recommendations = list(db.scalars(select(RecommendationHistory).where(RecommendationHistory.profile_id == profile_id).order_by(RecommendationHistory.created_at.desc())))
+    opportunities = {opportunity.id: opportunity for opportunity in OPPORTUNITIES}
+    items = [
+        HistoryItem(kind="completed", id=item.id, opportunity=opportunities.get(item.opportunity_id), completed_at=item.completed_at)
+        for item in completions
+    ]
+    items.extend(
+        HistoryItem(kind="recommended", id=item.id, opportunity=opportunities.get(item.opportunity_id), created_at=item.created_at)
+        for item in recommendations
+        if item.opportunity_id
+    )
+    return HistorySummary(
+        total_completed=len(completions),
+        total_minutes=sum(opportunities[item.opportunity_id].duration_minutes for item in completions if item.opportunity_id in opportunities),
+        items=items,
+    )

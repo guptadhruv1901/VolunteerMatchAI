@@ -22,10 +22,14 @@ npm run dev
 
 The frontend uses `VITE_API_URL` (default `http://localhost:8000/api`). The backend uses `DATABASE_URL`, `CORS_ORIGINS`, `AI_ENABLED`, and `AI_PROVIDER`. AI is intentionally disabled by default (`AI_ENABLED=false`, `AI_PROVIDER=none`); the deterministic recommendation engine is the only active provider.
 
+The recommendation engine enforces duration, energy, cause, environment, participation mode, equipment, accessibility, and completion-history constraints before ranking matches. The history view reads persisted completion totals and recommendation activity from `/api/profiles/{profile_id}/history`.
+
 ## Test
 ```powershell
 python -m pytest -q
 npm --prefix frontend run build
 ```
+
+Current validation: 4 backend tests pass and the Vite production build succeeds.
 
 See `docs/architecture.md` for the API and module overview.
