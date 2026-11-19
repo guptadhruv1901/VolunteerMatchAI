@@ -32,8 +32,8 @@ def test_context_constraints_and_structured_history():
         "location": "remote",
     }).json()
     context = client.post(f"/api/profiles/{p['id']}/contexts", json={
-        "time": "30m",
-        "energy": "low",
+        "time": "1h",
+        "energy": "medium",
         "environment": "indoors",
         "mode": "remote",
         "skills": ["teaching"],
@@ -43,9 +43,12 @@ def test_context_constraints_and_structured_history():
     assert context.status_code == 201
     result = client.post("/api/recommendations", json={"profile_id": p["id"], "context_id": str(context.json()["id"])}).json()
     assert result["matched"] is True
-    assert result["opportunity"]["duration_minutes"] <= 30
+    assert result["opportunity"]["duration_minutes"] <= 60
     assert result["opportunity"]["mode"] == "remote"
     assert result["opportunity"]["task_breakdown"]
+    alternatives = client.post(f"/api/recommendations/{result['recommendation_id']}/alternatives")
+    assert alternatives.status_code == 200
+    assert all(item["id"] != result["opportunity"]["id"] for item in alternatives.json())
     assert client.post(f"/api/recommendations/{result['recommendation_id']}/completion").status_code == 201
     history = client.get(f"/api/profiles/{p['id']}/history").json()
     assert history["total_completed"] == 1

@@ -100,7 +100,7 @@ def alternatives(recommendation_id: int, db: Session = Depends(get_db)):
     profile = get_profile(db, item.profile_id)
     context = ContextOut.model_validate(item.context)
     result = recommend(db, profile, context=context, excluded=prior)
-    return result["alternatives"]
+    return ([result["opportunity"]] if result["opportunity"] else []) + result["alternatives"]
 
 @app.post("/api/recommendations/{recommendation_id}/alternatives", response_model=list[Opportunity])
 def request_alternative(recommendation_id: int, db: Session = Depends(get_db)):
