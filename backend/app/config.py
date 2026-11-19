@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     ai_enabled: bool = False
     ai_provider: str = "none"
+    ai_api_key: str = ""
+    ai_model: str = "gemini-2.0-flash"
+    ai_timeout_seconds: float = 12.0
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
     @property

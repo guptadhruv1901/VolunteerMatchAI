@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-The frontend uses `VITE_API_URL` (default `http://localhost:8000/api`). The backend uses `DATABASE_URL`, `CORS_ORIGINS`, `AI_ENABLED`, and `AI_PROVIDER`. AI is intentionally disabled by default (`AI_ENABLED=false`, `AI_PROVIDER=none`); the deterministic recommendation engine is the only active provider.
+The frontend uses `VITE_API_URL` (default `http://localhost:8000/api`). The backend uses `DATABASE_URL`, `CORS_ORIGINS`, `AI_ENABLED`, `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, and `AI_TIMEOUT_SECONDS`. AI is intentionally disabled by default (`AI_ENABLED=false`, `AI_PROVIDER=none`); the deterministic recommendation engine remains the source of truth for eligibility and ranking. Set `AI_PROVIDER=gemini` and provide `AI_API_KEY` locally only if you want an optional Gemini-generated explanation for an already-matched opportunity. Never commit API keys.
 
 The recommendation engine enforces duration, energy, cause, environment, participation mode, equipment, accessibility, and completion-history constraints before ranking matches. The history view reads persisted completion totals and recommendation activity from `/api/profiles/{profile_id}/history`.
 

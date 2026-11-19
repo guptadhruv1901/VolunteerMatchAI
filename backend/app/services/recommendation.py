@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.ai.adapter import AIAdapter
 from app.models import Completion, RecommendationHistory
 from app.services.catalogue import OPPORTUNITIES, get_context
 
@@ -69,16 +70,35 @@ def recommend(db: Session, profile, context_id: str | None = None, context=None,
 
     ranked = sorted(eligible, key=lambda opportunity: (-score(opportunity), opportunity.duration_minutes, opportunity.id))
     matched = ranked[0] if ranked else None
+    deterministic_reason = (
+        "This match fits your selected cause, available time, energy, participation mode, "
+        "skills, and equipment."
+        if matched
+        else "No opportunity satisfies all of your current constraints. Try more time, another mode, or another cause."
+    )
+    reason = deterministic_reason
+    if matched:
+        prompt = (
+            "Write one concise, encouraging explanation (maximum 35 words) for this volunteer recommendation. "
+            "Do not invent facts or add opportunities. Mention only the strongest fit between the person's context "
+            "and the listed opportunity.\n"
+            f"Profile causes: {sorted(profile_causes)}; profile skills: {sorted(profile_skills)}; "
+            f"context causes: {sorted(context_causes)}; context skills: {sorted(context_skills)}; "
+            f"time: {getattr(context, 'time', 'flexible')}; energy: {getattr(context, 'energy', 'medium')}; "
+            f"mode: {getattr(context, 'mode', 'any')}; opportunity: {matched.title}; "
+            f"cause: {matched.cause}; skills: {matched.skills}; duration: {matched.duration}."
+        )
+        try:
+            generated_reason = AIAdapter().explain(prompt)
+            if generated_reason:
+                reason = generated_reason
+        except RuntimeError:
+            reason = deterministic_reason
     result = {
         "matched": bool(matched),
         "opportunity": matched.model_dump() if matched else None,
         "alternatives": [item.model_dump() for item in ranked[1:]],
-        "reason": (
-            "This match fits your selected cause, available time, energy, participation mode, "
-            "skills, and equipment."
-            if matched
-            else "No opportunity satisfies all of your current constraints. Try more time, another mode, or another cause."
-        ),
+        "reason": reason,
     }
     context_payload = context.model_dump() if hasattr(context, "model_dump") else {
         "id": str(getattr(context, "id", "daily")),
