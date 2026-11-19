@@ -1,5 +1,8 @@
+const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "127.0.0.1"
+  : window.location.hostname;
 const API = import.meta.env.VITE_API_URL
-  || `${window.location.protocol}//${window.location.hostname}:8000/api`;
+  || `${window.location.protocol}//${localHost}:8000/api`;
 
 export async function api(path, options = {}) {
   const request = () => fetch(`${API}${path}`, {
