@@ -8,6 +8,7 @@ class Profile(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
     causes: Mapped[list] = mapped_column(JSON, default=list)
     skills: Mapped[list] = mapped_column(JSON, default=list)
     availability: Mapped[str] = mapped_column(String(40), default="flexible")

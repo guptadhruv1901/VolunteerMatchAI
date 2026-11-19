@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class ProfileBase(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: EmailStr
+    description: str = Field(default="", max_length=500)
     causes: list[str] = []
     skills: list[str] = []
     availability: str = "flexible"
@@ -14,6 +15,7 @@ class ProfileCreate(ProfileBase): pass
 class ProfileUpdate(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
+    description: str | None = Field(default=None, max_length=500)
     causes: list[str] | None = None
     skills: list[str] | None = None
     availability: str | None = None
@@ -66,8 +68,10 @@ class Opportunity(BaseModel):
     format: str
     location: str
     duration: str
+    duration_minutes: int = Field(ge=1)
     schedule: str
     skills: list[str]
+    equipment: list[str] = []
     accessibility: list[str]
     impact: str
     tags: list[str]
@@ -75,7 +79,7 @@ class Opportunity(BaseModel):
     energy: str = "any"
     environment: str = "any"
     mode: str = "any"
-    equipment: list[str] = []
+    task_breakdown: list[str] = []
 
 class RecommendationResponse(BaseModel):
     matched: bool
@@ -97,3 +101,15 @@ class CompletionOut(BaseModel):
     opportunity_id: str
     completed_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class HistoryItem(BaseModel):
+    kind: str
+    id: int
+    opportunity: Opportunity | None = None
+    completed_at: datetime | None = None
+    created_at: datetime | None = None
+
+class HistorySummary(BaseModel):
+    total_completed: int
+    total_minutes: int
+    items: list[HistoryItem]
