@@ -10,6 +10,14 @@ def profile():
 def test_health_and_contexts():
     assert client.get("/api/health").json()["status"] == "ok"
     assert len(client.get("/api/contexts").json()) >= 2
+def test_duplicate_profile_email_returns_conflict():
+    email = f"{uuid4()}@example.com"
+    payload = {"name": "Duplicate", "email": email, "causes": ["education"], "location": "remote"}
+    assert client.post("/api/profiles", json=payload).status_code == 201
+    response = client.post("/api/profiles", json=payload)
+    assert response.status_code == 409
+    assert response.json()["detail"] == "A profile with this email already exists."
+
 def test_recommend_completion_duplicate_and_history():
     p = profile()
     r = client.post("/api/recommendations", json={"profile_id":p["id"],"context_id":"quick"})
