@@ -11,6 +11,7 @@ const causes = [
 ];
 const skills = ["Teaching", "Communication", "Writing", "Organization", "Technical Skills", "Creative Skills"];
 const equipment = [["laptop", "Laptop"], ["smartphone", "Smartphone"], ["internet", "Internet Access"], ["books", "Books or Stationery"], ["gloves", "Gloves"], ["none", "No Special Equipment"]];
+const accessNeeds = [["step-free", "Step-free access"], ["screen-reader", "Screen-reader friendly"]];
 
 function Shell({ title, kicker, children }) {
   return <section className="shell"><p className="kicker">{kicker}</p><h1>{title}</h1>{children}</section>;
@@ -59,6 +60,7 @@ function Profile() {
       <label>About you<textarea value={form.description} onChange={event => update("description", event.target.value)} placeholder="What would you enjoy contributing?" /></label>
       <label>Causes <span className="hint">Pick one or more</span><ToggleChips values={causes} selected={form.causes} onChange={value => update("causes", value)} /></label>
       <label>Skills <ToggleChips values={skills.map(value => [value.toLowerCase().replaceAll(" ", "-"), value])} selected={form.skills} onChange={value => update("skills", value)} /></label>
+      <label>Access needs <span className="hint">Optional</span><ToggleChips values={accessNeeds} selected={form.accessibility_needs} onChange={value => update("accessibility_needs", value)} /></label>
       <label>Participation preference<select value={form.location} onChange={event => update("location", event.target.value)}><option value="remote">Remote</option><option value="local">On-site</option></select></label>
       {error && <div className="error">{error}</div>}
       <button className="button primary">Continue <b>→</b></button>
