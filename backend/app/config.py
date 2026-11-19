@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     @property
     def cors_list(self) -> list[str]:
-        return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
+        configured = [x.strip().rstrip("/") for x in self.cors_origins.split(",") if x.strip()]
+        local_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        return list(dict.fromkeys(configured + local_origins))
 
 settings = Settings()
