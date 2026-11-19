@@ -1,10 +1,16 @@
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API = import.meta.env.VITE_API_URL
+  || `${window.location.protocol}//${window.location.hostname}:8000/api`;
 
 export async function api(path, options = {}) {
-  const response = await fetch(`${API}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+  } catch {
+    throw new Error(`Cannot reach VolunteerMatchAI backend at ${API}. Start the FastAPI server and try again.`);
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.detail || `Request failed (${response.status})`);
